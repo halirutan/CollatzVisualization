@@ -104,8 +104,8 @@ class CollatzGraph {
 /**
  * Represents the nodes of a Collatz graph.
  * We keep track of the node's [parent] and its [children].
- * For later visualization purposes, we also keep track of [depth] which reflects how often a single node has been
- * seen if we'd calculated the numbers without remembering previous results.
+ * For later visualization purposes, we also keep track of [depth] which reflects the depth of the node within the
+ * whole graph.
  */
 class Node(val id: Long) {
     var depth = 0
