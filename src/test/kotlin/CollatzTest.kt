@@ -1,3 +1,5 @@
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*
@@ -13,15 +15,12 @@ internal class CollatzTest {
     }
 
     @Test
-    fun testSimpleGraphHasCorrectNodeCount() {
+    fun testSimpleGraphHasCorrectNodeDepths() {
         val g = CollatzGraph()
         g.addNodes(listOf(256))
+        var depth = 0
         g.visitGraph({
-            if (it.id == 1L) {
-                assertEquals(2, it.count)
-            } else {
-                assertEquals(1, it.count)
-            }
+            assertEquals(depth++, it.depth)
         })
     }
 
@@ -34,5 +33,33 @@ internal class CollatzTest {
             assertEquals(values.first(), it.id)
             values.removeAt(0)
         })
+    }
+
+    @Test
+    fun testViewMatrixMapping() {
+        val width = 640f
+        val height = 480f
+        val viewRect = Rect(-1f, -1f, 1f, 1f)
+        val m = calculateViewMatrix(viewRect, width, height)
+
+        m.map(Offset(0f, 0f)).also { (x, y) ->
+            assertEquals(width / 2f, x)
+            assertEquals(height / 2f, y)
+        }
+
+        m.map(Offset(-1f, 0f)).also { (x, y) ->
+            assertEquals(0f, x)
+            assertEquals(height / 2f, y)
+        }
+
+        m.map(Offset(0f, -1f)).also { (x, y) ->
+            assertEquals(width / 2f, x)
+            assertEquals(height, y)
+        }
+
+        m.map(Offset(1f, 1f)).also { (x, y) ->
+            assertEquals(width, x)
+            assertEquals(0f, y)
+        }
     }
 }

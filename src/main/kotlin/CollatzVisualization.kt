@@ -44,16 +44,17 @@ fun astroIntensity(l: Double, s: Double, r: Double, h: Double, g: Double): Color
  * of edges.
  */
 data class GraphStyle(
-    val edgeLengthGamma: Double = 1.0, //1.24,
+    val edgeLengthGamma: Double = 1.2, //1.24,
     val angleAmplifier: Double = 0.29,
     val angleShift: Double = 0.7,
-    val colorDirection: Double = 2.4,
-    val colorRotations: Double = 1.0, //2.18,
-    val colorSaturationAmplitude: Double = 1.815,
+    val colorDirection: Double = 0.3,
+    val colorRotations: Double = 0.5, //2.18,
+    val colorSaturationAmplitude: Double = 0.815,
     val colorIntensityGamma: Double = 1.6, //1.64,
-    val colorSpeedGamma: Double = 0.01, //0.04,
-    val strokeWidthFactor: Double = 0.38,
-    val strokeWidthGamma: Double = 0.04
+    val colorSpeedGamma: Double = 0.5, //0.04,
+    val strokeMinValue: Double = 0.01,
+    val strokeWidthFactor: Double = 0.15, //0.38,
+    val strokeWidthGamma: Double = 0.5 //0.04
 )
 
 /**
@@ -67,11 +68,27 @@ data class StyledLine(
     val color: Color
 )
 
+/**
+ * Wrapper to encapsulate both the styled lines to be drawn as well as the viewing-rectangle that
+ * contains the maximum coordinates of the graph.
+ */
 data class ViewData(
     val lines: List<StyledLine>,
     val viewRect: Rect
 )
 
+/**
+ * Turns a graph and a graph-style into the actual line segments.
+ * It visits all nodes in the Collatz graph starting at the root node 1 and from node to node it makes a small
+ * line segment.
+ * Depending on if the node has an even or uneven ID, the next line will be angled differently.
+ * While this is basically the gist, there are quite some parameters that styled along the way.
+ * E.g.
+ *
+ * - the length of the line depends on the node number
+ * - the stroke style will depend on the depth of the node in the tree
+ * - the color of the line will also depend on the nodes properties
+ */
 fun calculateLines(g: CollatzGraph, style: GraphStyle): ViewData {
     var xMin = Float.MAX_VALUE
     var yMin = Float.MAX_VALUE
@@ -99,9 +116,14 @@ fun calculateLines(g: CollatzGraph, style: GraphStyle): ViewData {
         // Store values for current node since it's needed for calculating the next node
         angles[node.id] = phi
         positions[node.id] = position
-        //  val t = ((node.id - 1.0) / maxNodeValue).pow(style.colorSpeedGamma)
-        val t = 1.0 - ((node.count - 1.0) / g.root.count).pow(style.colorSpeedGamma)
-        val strokeWidth = style.strokeWidthFactor * ((node.count.toDouble() / g.root.count).pow(style.strokeWidthGamma))
+
+
+        val scaledDepth = node.depth.toDouble() / g.maxNodeValue()
+        val t = scaledDepth.pow(style.colorSpeedGamma)
+        val strokeWidth = max(
+            style.strokeMinValue,
+            style.strokeWidthFactor * (1.0 - scaledDepth.pow(style.strokeWidthGamma))
+        )
         result.add(
             StyledLine(
                 startOffset = prevPosition,
@@ -121,45 +143,51 @@ fun calculateLines(g: CollatzGraph, style: GraphStyle): ViewData {
     return ViewData(result, Rect(xMin, yMin, xMax, yMax))
 }
 
+/**
+ * Canvas that just renders the styled line primitives.
+ */
 @Composable
 fun collatzCanvas(lines: List<StyledLine>, viewRect: Rect) = Canvas(modifier = Modifier.fillMaxSize()) {
-        val width = size.width
-        val height = size.height
-        val viewMatrix = calculateViewMatrix(viewRect, width, height)
+    val width = size.width
+    val height = size.height
+    val viewMatrix = calculateViewMatrix(viewRect, width, height)
 
-        withTransform(
-            {
-                transform(viewMatrix)
-            }) {
-            for (l in lines) {
-                drawLine(
-                    start = l.startOffset,
-                    end = l.endOffset,
-                    strokeWidth = l.strokeWidth,
-                    color = l.color,
-                    cap = StrokeCap.Round
-                )
-            }
+    withTransform(
+        {
+            transform(viewMatrix)
+        }) {
+        for (l in lines) {
+            drawLine(
+                start = l.startOffset,
+                end = l.endOffset,
+                strokeWidth = l.strokeWidth,
+                color = l.color,
+                cap = StrokeCap.Round
+            )
         }
     }
+}
 
 
 /**
  * Calculates the view matrix that centers the graph on the canvas.
  */
-private fun calculateViewMatrix(
+fun calculateViewMatrix(
     viewRect: Rect,
     width: Float,
     height: Float
 ): Matrix {
-    val maxSize = max(viewRect.width, viewRect.height)
+    val scale = max(viewRect.width, viewRect.height)
     val (left, bottom) = viewRect.bottomLeft
-    val viewMatrix = floatArrayOf(
-        width / maxSize, 0f, 0f, 0f,
-        0f, -height / maxSize, 0f, 0f,
+//  TODO: Build in the centering correction when re-calculation of view matrix with resize is implemented.
+//    val correctionLeft = max(0f, (width - height) / 2f)
+//    val correctionBottom = max(0f, (height - width) / 2f)
+    val matrixValues = floatArrayOf(
+        width / scale, 0f, 0f, 0f,
+        0f, -height / scale, 0f, 0f,
         0f, 0f, 1f, 0f,
         -left * width / viewRect.width, bottom * height / viewRect.height, 0f, 1f
     )
-    return Matrix(viewMatrix)
+    return Matrix(matrixValues)
 }
 

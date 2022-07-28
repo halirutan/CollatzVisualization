@@ -15,7 +15,7 @@ import kotlin.math.max
  * Use [addNodes] or [addNode] to add additional Collatz sequences to the graph.
  */
 class CollatzGraph {
-    val root = Node(1)
+    private val root = Node(1)
     private val nodes = mutableMapOf(1L to root)
     private var maxNode = 1L
 
@@ -30,7 +30,7 @@ class CollatzGraph {
      * Adds all [numbers] to the graph and calculates their sequences.
      */
     fun addNodes(numbers: List<Long>) {
-        numbers.sortedDescending().forEach { addNode(it) }
+        numbers.forEach { addNode(it) }
     }
 
     /**
@@ -44,28 +44,17 @@ class CollatzGraph {
             return
         }
         val seq = calculateSequence(number).onEach {
-            if (nodes.containsKey(it)) {
-                incrementUpwardsPath(nodes[it]!!)
-            }
             nodes.putIfAbsent(it, Node(it))
         }
+        var initialDepth = nodes[seq[0]]?.depth ?: return
         for (i in 0 until seq.size - 1) {
             val n1 = nodes[seq[i]] ?: throw RuntimeException("Node 1 is null. Should never happen.")
             val n2 = nodes[seq[i + 1]] ?: throw RuntimeException("Node 2 is null. Should never happen.")
             n1.children.add(n2)
             n2.parent = n1
+            n2.depth = ++initialDepth
         }
-    }
-
-    /**
-     * Increments the count of how often each node has been seen up to the root from a specific [node].
-     */
-    private fun incrementUpwardsPath(node: Node) {
-        var n = node
-        while (n != Node.NULL_NODE) {
-            n.count++
-            n = n.parent
-        }
+        maxNode = max(maxNode, initialDepth.toLong())
     }
 
     /**
@@ -105,7 +94,6 @@ class CollatzGraph {
                 3 * n + 1
             }
         }
-        maxNode = max(maxNode, result.maxOrNull() ?: 0L)
         // We add the number n that already exists in the graph as well,
         // because we need to establish the parent/child edges to the existing nodes later.
         result.addFirst(n)
@@ -116,11 +104,11 @@ class CollatzGraph {
 /**
  * Represents the nodes of a Collatz graph.
  * We keep track of the node's [parent] and its [children].
- * For later visualization purposes, we also keep track of [count] which reflects how often a single node has been
+ * For later visualization purposes, we also keep track of [depth] which reflects how often a single node has been
  * seen if we'd calculated the numbers without remembering previous results.
  */
 class Node(val id: Long) {
-    var count = 1
+    var depth = 0
     var parent: Node = NULL_NODE
     val children = mutableListOf<Node>()
 
