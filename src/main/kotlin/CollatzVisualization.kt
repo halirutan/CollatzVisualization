@@ -1,5 +1,9 @@
+@file:Suppress("FunctionName")
+
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -8,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.unit.dp
 import kotlin.math.*
 
 /**
@@ -44,14 +49,19 @@ fun astroIntensity(l: Double, s: Double, r: Double, h: Double, g: Double): Color
  * of edges.
  */
 data class GraphStyle(
+    // Properties for adjusting the lines
     val edgeLengthGamma: Double = 1.2, //1.24,
-    val angleAmplifier: Double = 0.29,
     val angleShift: Double = 0.7,
+    val angleAmplifier: Double = 0.29,
+
+    // Properties for adjust line colors
     val colorDirection: Double = 0.3,
     val colorRotations: Double = 0.5, //2.18,
     val colorSaturationAmplitude: Double = 0.815,
     val colorIntensityGamma: Double = 1.6, //1.64,
     val colorSpeedGamma: Double = 0.5, //0.04,
+
+    // Properties for how lines are stroked
     val strokeMinValue: Double = 0.01,
     val strokeWidthFactor: Double = 0.15, //0.38,
     val strokeWidthGamma: Double = 0.5 //0.04
@@ -147,27 +157,25 @@ fun calculateLines(g: CollatzGraph, style: GraphStyle): ViewData {
  * Canvas that just renders the styled line primitives.
  */
 @Composable
-fun collatzCanvas(lines: List<StyledLine>, viewRect: Rect) = Canvas(modifier = Modifier.fillMaxSize()) {
-    val width = size.width
-    val height = size.height
-    val viewMatrix = calculateViewMatrix(viewRect, width, height)
-
-    withTransform(
-        {
-            transform(viewMatrix)
-        }) {
-        for (l in lines) {
-            drawLine(
-                start = l.startOffset,
-                end = l.endOffset,
-                strokeWidth = l.strokeWidth,
-                color = l.color,
-                cap = StrokeCap.Round
-            )
+fun CollatzCanvas(lines: List<StyledLine>, viewRect: Rect) {
+    Canvas(modifier = Modifier.background(Color.LightGray).size(1000.dp).padding(60.dp)) {
+        val viewMatrix = calculateViewMatrix(viewRect, size.width, size.height)
+        withTransform(
+            {
+                transform(viewMatrix)
+            }) {
+            for (l in lines) {
+                drawLine(
+                    start = l.startOffset,
+                    end = l.endOffset,
+                    strokeWidth = l.strokeWidth,
+                    color = l.color,
+                    cap = StrokeCap.Round
+                )
+            }
         }
     }
 }
-
 
 /**
  * Calculates the view matrix that centers the graph on the canvas.
@@ -177,16 +185,17 @@ fun calculateViewMatrix(
     width: Float,
     height: Float
 ): Matrix {
-    val scale = max(viewRect.width, viewRect.height)
-    val (left, bottom) = viewRect.bottomLeft
-//  TODO: Build in the centering correction when re-calculation of view matrix with resize is implemented.
-//    val correctionLeft = max(0f, (width - height) / 2f)
-//    val correctionBottom = max(0f, (height - width) / 2f)
+    val l = max(viewRect.width, viewRect.height)
+    val scale = (min(width, height)) / l
+    val left = viewRect.center.x - l / 2f
+    val bottom = viewRect.center.y + l / 2f
+    val leftCorrection = max(0f, width - height) / 2f
+    val bottomCorrection = max(0f, height - width) / 2f
     val matrixValues = floatArrayOf(
-        width / scale, 0f, 0f, 0f,
-        0f, -height / scale, 0f, 0f,
+        scale, 0f, 0f, 0f,
+        0f, -scale, 0f, 0f,
         0f, 0f, 1f, 0f,
-        -left * width / viewRect.width, bottom * height / viewRect.height, 0f, 1f
+        -left * scale + leftCorrection, bottom * scale + bottomCorrection, 0f, 1f
     )
     return Matrix(matrixValues)
 }
