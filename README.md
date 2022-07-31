@@ -1,8 +1,8 @@
 # Collatz Sequence Visualization with Kotlin and Compose Desktop
 
-No explanation yet, but we have an image..
 
-![Image](img.png)
+
+![Image](images/collatz.mp4)
 
 ## Run it
 
