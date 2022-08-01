@@ -1,7 +1,6 @@
 @file:Suppress("FunctionName")
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -50,21 +49,22 @@ fun astroIntensity(l: Double, s: Double, r: Double, h: Double, g: Double): Color
  */
 data class GraphStyle(
     // Properties for adjusting the lines
-    val edgeLengthGamma: Double = 1.2, //1.24,
-    val angleShift: Double = 0.7,
+    val angleShift: Double = 0.71,
     val angleAmplifier: Double = 0.29,
-
-    // Properties for adjust line colors
-    val colorDirection: Double = 0.3,
-    val colorRotations: Double = 0.5, //2.18,
-    val colorSaturationAmplitude: Double = 0.815,
-    val colorIntensityGamma: Double = 1.6, //1.64,
-    val colorSpeedGamma: Double = 0.5, //0.04,
+    val edgeLengthGamma: Double = 1.11,
 
     // Properties for how lines are stroked
-    val strokeMinValue: Double = 0.01,
-    val strokeWidthFactor: Double = 0.15, //0.38,
-    val strokeWidthGamma: Double = 0.5 //0.04
+    val strokeMinValue: Double = 0.1,
+    val strokeWidthFactor: Double = 0.27, //0.38,
+    val strokeWidthGamma: Double = 0.81, //0.04
+
+    // Properties for adjust line colors
+    val colorDirection: Double = 1.59,
+    val colorRotations: Double = 1.19,
+    val colorSaturationAmplitude: Double = 1.0,
+    val colorIntensityGamma: Double = 0.93,
+    val colorSpeedGamma: Double = 0.42,
+
 )
 
 /**
@@ -158,7 +158,7 @@ fun calculateLines(g: CollatzGraph, style: GraphStyle): ViewData {
  */
 @Composable
 fun CollatzCanvas(lines: List<StyledLine>, viewRect: Rect) {
-    Canvas(modifier = Modifier.background(Color.LightGray).size(1000.dp).padding(60.dp)) {
+    Canvas(modifier = Modifier.size(1000.dp).padding(60.dp)) {
         val viewMatrix = calculateViewMatrix(viewRect, size.width, size.height)
         withTransform(
             {
@@ -179,16 +179,31 @@ fun CollatzCanvas(lines: List<StyledLine>, viewRect: Rect) {
 
 /**
  * Calculates the view matrix that centers the graph on the canvas.
+ * The matrix uses [homogeneous coordinates](https://en.wikipedia.org/wiki/Homogeneous_coordinates) to create a mapping
+ * from the coordinates of the graph vertices to pixel coordinates.
+ * The trick with homogeneous coordinates is that it uses a 3x3 (or in that case 4x4) matrix to represent
+ * transformations in 2D because with a 2x2 matrix it would not be possible to represent translations (i.e. moving
+ * the coordinate system).
+ *
+ * The mapping will keep the aspect ratio of the graph so that it's not deformed.
+ *
+ * @param viewRect Provides the rectangle (min and max coordinates) for the graph vertices.
+ * @param width Width of the canvas
+ * @param height Height of the canvas
  */
 fun calculateViewMatrix(
     viewRect: Rect,
     width: Float,
     height: Float
 ): Matrix {
+    // To keep the aspect ratio of the graph, we use uniform scaling in both x and y direction
     val l = max(viewRect.width, viewRect.height)
     val scale = (min(width, height)) / l
+
+    // Calculate the necessary shifts to center the graph on the canvas
     val left = viewRect.center.x - l / 2f
     val bottom = viewRect.center.y + l / 2f
+    // Corrections to align the graph in the center and not at the border
     val leftCorrection = max(0f, width - height) / 2f
     val bottomCorrection = max(0f, height - width) / 2f
     val matrixValues = floatArrayOf(
