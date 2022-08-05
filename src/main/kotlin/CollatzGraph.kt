@@ -27,6 +27,20 @@ class CollatzGraph {
     }
 
     /**
+     *  Adds all [numbers] into the graph and calculates their sequences.
+     *  After each inserted node, [progressUpdate] is called with the progress.
+     *
+     *  @param numbers List of numbers to insert into the graph
+     *  @param progressUpdate Update callback that returns a number between 0.0 and 1.0 that represents the
+     *  progress from start to finish
+     */
+    fun addNodes(numbers: List<Long>, progressUpdate: (Double) -> Unit) {
+        val length = numbers.size.toDouble() - 1.0
+        var iter = 0
+        numbers.forEach { addNode(it); progressUpdate((iter++ / length)) }
+    }
+
+    /**
      * Adds all [numbers] to the graph and calculates their sequences.
      */
     fun addNodes(numbers: List<Long>) {

@@ -7,9 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Matrix
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.dp
 import kotlin.math.*
@@ -37,9 +35,7 @@ fun astroIntensity(l: Double, s: Double, r: Double, h: Double, g: Double): Color
     val green = (lg + a * (-0.29227 * cosPsi - 0.90649 * sinPsi)).coerceAtLeast(0.0).coerceAtMost(1.0).toFloat()
     val blue = (lg + a * (1.97294 * cosPsi)).coerceAtLeast(0.0).coerceAtMost(1.0).toFloat()
     return Color(
-        red = red,
-        green = green,
-        blue = blue
+        red = red, green = green, blue = blue
     )
 }
 
@@ -65,17 +61,14 @@ data class GraphStyle(
     val colorIntensityGamma: Double = 0.93,
     val colorSpeedGamma: Double = 0.42,
 
-)
+    )
 
 /**
  * Helper class since the line calculation is already pretty intricate and I don't want to mix it with
  * Compose drawing calls
  */
 data class StyledLine(
-    val startOffset: Offset,
-    val endOffset: Offset,
-    val strokeWidth: Float,
-    val color: Color
+    val startOffset: Offset, val endOffset: Offset, val strokeWidth: Float, val color: Color
 )
 
 /**
@@ -83,8 +76,7 @@ data class StyledLine(
  * contains the maximum coordinates of the graph.
  */
 data class ViewData(
-    val lines: List<StyledLine>,
-    val viewRect: Rect
+    val lines: List<StyledLine>, val viewRect: Rect
 )
 
 /**
@@ -131,8 +123,7 @@ fun calculateLines(g: CollatzGraph, style: GraphStyle): ViewData {
         val scaledDepth = node.depth.toDouble() / g.maxNodeValue()
         val t = scaledDepth.pow(style.colorSpeedGamma)
         val strokeWidth = max(
-            style.strokeMinValue,
-            style.strokeWidthFactor * (1.0 - scaledDepth.pow(style.strokeWidthGamma))
+            style.strokeMinValue, style.strokeWidthFactor * (1.0 - scaledDepth.pow(style.strokeWidthGamma))
         )
         result.add(
             StyledLine(
@@ -157,14 +148,14 @@ fun calculateLines(g: CollatzGraph, style: GraphStyle): ViewData {
  * Canvas that just renders the styled line primitives.
  */
 @Composable
-fun CollatzCanvas(lines: List<StyledLine>, viewRect: Rect) {
+fun CollatzCanvas(graph: CollatzGraph, style: GraphStyle) {
+    val viewData = calculateLines(graph, style)
     Canvas(modifier = Modifier.size(1000.dp).padding(60.dp)) {
-        val viewMatrix = calculateViewMatrix(viewRect, size.width, size.height)
-        withTransform(
-            {
-                transform(viewMatrix)
-            }) {
-            for (l in lines) {
+        val viewMatrix = calculateViewMatrix(viewData.viewRect, size.width, size.height)
+        withTransform({
+            transform(viewMatrix)
+        }) {
+            viewData.lines.forEach { l ->
                 drawLine(
                     start = l.startOffset,
                     end = l.endOffset,
@@ -192,9 +183,7 @@ fun CollatzCanvas(lines: List<StyledLine>, viewRect: Rect) {
  * @param height Height of the canvas
  */
 fun calculateViewMatrix(
-    viewRect: Rect,
-    width: Float,
-    height: Float
+    viewRect: Rect, width: Float, height: Float
 ): Matrix {
     // To keep the aspect ratio of the graph, we use uniform scaling in both x and y direction
     val l = max(viewRect.width, viewRect.height)
@@ -207,10 +196,22 @@ fun calculateViewMatrix(
     val leftCorrection = max(0f, width - height) / 2f
     val bottomCorrection = max(0f, height - width) / 2f
     val matrixValues = floatArrayOf(
-        scale, 0f, 0f, 0f,
-        0f, -scale, 0f, 0f,
-        0f, 0f, 1f, 0f,
-        -left * scale + leftCorrection, bottom * scale + bottomCorrection, 0f, 1f
+        scale,
+        0f,
+        0f,
+        0f,
+        0f,
+        -scale,
+        0f,
+        0f,
+        0f,
+        0f,
+        1f,
+        0f,
+        -left * scale + leftCorrection,
+        bottom * scale + bottomCorrection,
+        0f,
+        1f
     )
     return Matrix(matrixValues)
 }
