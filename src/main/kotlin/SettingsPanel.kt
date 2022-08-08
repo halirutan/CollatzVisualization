@@ -9,7 +9,10 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,13 +23,18 @@ import androidx.compose.ui.unit.sp
  * to the caller.
  */
 @Composable
-fun PropertySlider(initialValue: Double, minValue: Double, maxValue: Double, label: String, onChange: (Double) -> Unit) {
+fun PropertySlider(
+    initialValue: Double,
+    minValue: Double,
+    maxValue: Double,
+    label: String,
+    onChange: (Double) -> Unit
+) {
     var value by remember { mutableStateOf(initialValue.toFloat()) }
     Column(
         modifier =
         Modifier
             .padding(5.dp)
-
     ) {
         Row {
             Text(text = "$label: ", fontSize = 10.sp)
@@ -35,21 +43,36 @@ fun PropertySlider(initialValue: Double, minValue: Double, maxValue: Double, lab
         Slider(
             value = value,
             valueRange = minValue.toFloat()..maxValue.toFloat(),
-            onValueChange = { value = it; onChange(it.toDouble()) })
+            onValueChange = { value = it; onChange(value.toDouble()) },
+            onValueChangeFinished = { onChange(value.toDouble()) }
+        )
     }
 }
 
 /**
  * A panel that shows sliders for all values of [GraphStyle].
+ *
+ * @param style initial style for the graph.
+ * @param active mutable indicator that is true when the mouse is over the settings panel and false otherwise.
+ *              Used to render a small graph, when changing style settings.
+ * @param onValueChange Callback function that is used in the outer context to display the graph with changed style.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SettingsPanel(style: GraphStyle, onValueChange: (GraphStyle) -> Unit) {
-    LazyColumn(Modifier.width(300.dp)) {
-        item { Text("Graph Settings",
-            color = MaterialTheme.colors.primaryVariant,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 10.dp)
-            ) }
+fun SettingsPanel(style: GraphStyle, active: MutableState<Boolean>, onValueChange: (GraphStyle) -> Unit) {
+    LazyColumn(modifier = Modifier
+        .width(300.dp)
+        .onPointerEvent(eventType = PointerEventType.Enter) { active.value = true }
+        .onPointerEvent(eventType = PointerEventType.Exit) { active.value = false }
+    ) {
+        item {
+            Text(
+                "Graph Settings",
+                color = MaterialTheme.colors.primaryVariant,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 10.dp)
+            )
+        }
         item {
             PropertySlider(
                 style.angleShift,
@@ -77,7 +100,8 @@ fun SettingsPanel(style: GraphStyle, onValueChange: (GraphStyle) -> Unit) {
         }
 
         item {
-            Text("Stroke Settings",
+            Text(
+                "Stroke Settings",
                 color = MaterialTheme.colors.primaryVariant,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(vertical = 10.dp)
@@ -107,11 +131,14 @@ fun SettingsPanel(style: GraphStyle, onValueChange: (GraphStyle) -> Unit) {
                 "Stroke Width Gamma"
             ) { newValue -> onValueChange(style.copy(strokeWidthGamma = newValue)) }
         }
-        item { Text("Color Settings",
-            color = MaterialTheme.colors.primaryVariant,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 10.dp)
-        ) }
+        item {
+            Text(
+                "Color Settings",
+                color = MaterialTheme.colors.primaryVariant,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 10.dp)
+            )
+        }
 
         item {
             PropertySlider(
